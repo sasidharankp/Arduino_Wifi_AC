@@ -6,7 +6,7 @@ const char* listeningTopic = LISTENING_TOPIC;
 
 String deviceInfo="";
 void setup_mqtt() {
-  Serial.println(" IP Address: "+(WiFi.localIP()).toString());
+
   client.setServer(mqttServer, mqttPort);
   client.setCallback(decodeMessage);
   while (!client.connected()) {

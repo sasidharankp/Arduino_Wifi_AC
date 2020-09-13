@@ -1,4 +1,8 @@
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+typedef ESP8266WebServer  WiFiWebServer;
+#include <AutoConnect.h>
 #include "secrets.h"
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -8,6 +12,14 @@
 #include <IRutils.h>
 #include <Timer.h>
 #include <DHT.h>
+#endif
+
+WiFiWebServer server;
+AutoConnect portal(server);
+AutoConnectConfig config;
+
+const char* www_username = "admin";
+const char* www_password = "esp8266";
 
 Timer t;
 WiFiClient espClient;
@@ -31,9 +43,18 @@ void setup() {
   randomSeed(micros());
   Serial.begin(115200);
   oledSetup();
-  boolean wifi_status = setup_wifi();
-  if (wifi_status) {
-    setup_OTA();
+  delay(500);
+  server.on("/", []() {
+    if (!server.authenticate(www_username, www_password)) {
+      return server.requestAuthentication();
+    }
+    onRoot();
+  });
+  config.ota = AC_OTA_BUILTIN;
+  portal.config(config);
+  portal.begin();
+  amber();
+  if (WiFi.status() == WL_CONNECTED) {
     setup_mqtt();
   }
   dhtSetup();
@@ -41,18 +62,31 @@ void setup() {
   t.every(60000, publishDhtData);
 }
 
+void onRoot() {
+  WiFiWebServer& server = portal.host();
+  server.sendHeader("Location", String("http://") + server.client().localIP().toString() + "/smartAC");
+  server.send(302, "text/plain", "");
+  server.client().flush();
+  server.client().stop();
+}
+
 void loop() {
   t.update();
-  if (!client.connected()) {
-    long now = millis();
-    if (now - lastReconnectAttempt > 5000) {
-      lastReconnectAttempt = now;
-      if (reconnect()) {
-        lastReconnectAttempt = 0;
-      }
-    }
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    red();
+    Serial.println("WIFI DISCONNECTED");
   } else {
-    // Client connected
-    client.loop();
+//    if (!client.connected()) {
+//      amber();
+//      long now = millis();
+//      if (now - lastReconnectAttempt > 5000) {
+//        lastReconnectAttempt = now;
+//        if (reconnect()) {
+//          lastReconnectAttempt = 0;
+//        }
+//      }
+//    }
   }
+  portal.handleClient();
 }

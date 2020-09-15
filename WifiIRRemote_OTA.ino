@@ -49,6 +49,40 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
       "pattern": "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
     },
     {
+      "name": "Warning",
+      "type": "ACText",
+      "value": "Do Not Change the below Fields Unless you know What you are doing",
+      "style": "font-family:Arial;font-size:18px;font-weight:400;color:#ba2d25"
+    },
+    {
+      "name": "irch",
+      "type": "ACInput",
+      "label": "IR Channel",
+      "placeholder":"Channel To Receive IR Commands",
+      "value":"/feeds/ircommands"
+    },
+    {
+      "name": "controlch",
+      "type": "ACInput",
+      "label": "Device Control Channel",
+      "placeholder":"Channel to Receive device Commands",
+      "value":"/feeds/devicecommands"
+    },
+    {
+      "name": "telemetrych",
+      "type": "ACInput",
+      "label": "Device Telemetry Channel",
+      "placeholder":"Channel to Send Telenetry info",
+      "value":"/feeds/devicetelemetry"
+    },
+    {
+      "name": "statech",
+      "type": "ACInput",
+      "label": "Device State Channel",
+      "placeholder":"Channel to Send Device State",
+      "value":"/feeds/devicestate"
+    },
+    {
       "name": "load",
       "type": "ACSubmit",
       "value": "Load",
@@ -145,10 +179,14 @@ void setup() {
       SPIFFS.begin();
       File param = SPIFFS.open(PARAM_FILE, "r");
       if (param) {
-        aux.loadElement(param, { "text", "mqttusername", "mqttpassword", "adafruitname" } );
+        aux.loadElement(param, { "text", "mqttusername", "mqttpassword", "adafruitname", "irch","controlch","telemetrych","statech" } );
         Serial.println("MQTT Usename: "+ aux["mqttusername"].value);
         Serial.println("MQTT Password: "+ aux["mqttpassword"].value);
         Serial.println("Adafruit Username: "+ aux["adafruitname"].value);
+        Serial.println("IR Channel: "+ aux["irch"].value);
+        Serial.println("Device Channel: "+ aux["controlch"].value);
+        Serial.println("Telemetry Channel: "+ aux["telemetrych"].value);
+        Serial.println("State Channel: "+ aux["statech"].value);
         param.close();
       }
       SPIFFS.end();
@@ -165,7 +203,7 @@ void setup() {
     SPIFFS.begin();
     File param = SPIFFS.open(PARAM_FILE, "w");
     if (param) {
-      elementsAux.saveElement(param, { "text", "mqttusername", "mqttpassword", "adafruitname" });
+      elementsAux.saveElement(param, { "text", "mqttusername", "mqttpassword", "adafruitname", "irch","controlch","telemetrych","statech" });
       param.close();
       // Read the saved elements again to display.
       param = SPIFFS.open(PARAM_FILE, "r");

@@ -15,7 +15,20 @@ typedef ESP8266WebServer  WiFiWebServer;
 
 #define PARAM_FILE      "/mqtt.json"
 
-static const char PAGE_ELEMENTS[] PROGMEM = R"(
+//Beginning Of MQTT Variables//
+char* MQTT_SERVER ="";
+char* MQTT_USERNAME = "";
+unsigned int MQTT_PORT = 1883;
+char* MQTT_PASSWORD = "";
+String FEED_USERNAME = ""; //some mqtt brokers require account username
+char* IR_COMMANDS = "";
+char* DEVICE_COMMANDS = "";
+char* DEVICE_STATE = "";
+char* DEVICE_TELEMETRY = "";
+char * clientId ="";
+//END Of MQTT Variables//
+
+static const char CONFIG_PAGE[] PROGMEM = R"(
 {
   "uri": "/mqtt",
   "title": "MQTT",
@@ -55,6 +68,20 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
       "style": "font-family:Arial;font-size:18px;font-weight:400;color:#ba2d25"
     },
     {
+      "name": "mqttserver",
+      "type": "ACInput",
+      "label": "MQTT Server",
+      "placeholder":"MQTT Server",
+      "value":"io.adafruit.com"
+    },
+    {
+      "name": "mqttport",
+      "type": "ACInput",
+      "label": "MQTT Port",
+      "placeholder":"MQTT Port",
+      "value":"1883"
+    },
+    {
       "name": "irch",
       "type": "ACInput",
       "label": "IR Channel",
@@ -62,7 +89,7 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
       "value":"/feeds/ircommands"
     },
     {
-      "name": "controlch",
+      "name": "commandch",
       "type": "ACInput",
       "label": "Device Control Channel",
       "placeholder":"Channel to Receive device Commands",
@@ -103,7 +130,7 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
 }
 )";
 
-static const char PAGE_SAVE[] PROGMEM = R"(
+static const char SAVE_PAGE[] PROGMEM = R"(
 {
   "uri": "/save",
   "title": "MQTT",
@@ -141,9 +168,6 @@ AutoConnectConfig config;
 AutoConnectAux  elementsAux;
 AutoConnectAux  saveAux;
 
-//const char* www_username = "admin";
-//const char* www_password = "esp8266";
-
 Timer t;
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -167,35 +191,49 @@ void setup() {
   Serial.begin(115200);
   oledSetup();
   delay(500);
+  
   server.on("/", []() {
-//    if (!server.authenticate(www_username, www_password)) {
-//      return server.requestAuthentication();
-//    }
     onRoot();
   });
-  elementsAux.load(FPSTR(PAGE_ELEMENTS));
+  loadMQTTForm();
+  saveMQTTForm();
+  setMQTTDetails(elementsAux);
+  
+  config.ota = AC_OTA_BUILTIN;
+  portal.join({ elementsAux, saveAux });
+  config.ticker = true;
+  portal.config(config);
+  portal.begin();
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    amber();
+    clientId=stringToCharArray("ESP8266AcRemote"+String(random(0xfffff), HEX));
+    setup_mqtt(MQTT_SERVER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, clientId);
+  }
+  dhtSetup();
+  Serial.println("INITIAL TEMPERATURE: " + String(previousTemperature) + " INITIAL HUMIDITY: " + String(previousHumidity));
+  t.every(60000, publishDhtData);
+}
+
+void loadMQTTForm(){
+    elementsAux.load(FPSTR(CONFIG_PAGE));
   elementsAux.on([] (AutoConnectAux& aux, PageArgument& arg) {
     if (portal.where() == "/mqtt") {
       SPIFFS.begin();
       File param = SPIFFS.open(PARAM_FILE, "r");
       if (param) {
-        aux.loadElement(param, { "text", "mqttusername", "mqttpassword", "adafruitname", "irch","controlch","telemetrych","statech" } );
-        Serial.println("MQTT Usename: "+ aux["mqttusername"].value);
-        Serial.println("MQTT Password: "+ aux["mqttpassword"].value);
-        Serial.println("Adafruit Username: "+ aux["adafruitname"].value);
-        Serial.println("IR Channel: "+ aux["irch"].value);
-        Serial.println("Device Channel: "+ aux["controlch"].value);
-        Serial.println("Telemetry Channel: "+ aux["telemetrych"].value);
-        Serial.println("State Channel: "+ aux["statech"].value);
+        aux.loadElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch","commandch","telemetrych","statech" });
         param.close();
       }
       SPIFFS.end();
     }
     return String();
   });
+}
 
-  saveAux.load(FPSTR(PAGE_SAVE));
-  saveAux.on([] (AutoConnectAux& aux, PageArgument& arg) {
+void saveMQTTForm(){
+saveAux.load(FPSTR(SAVE_PAGE));
+saveAux.on([] (AutoConnectAux& aux, PageArgument& arg) {
     AutoConnectInput& mqttusername = elementsAux["mqttusername"].as<AutoConnectInput>();
     aux["validated"].value = mqttusername.isValid() ? String() : String("Input data pattern missmatched.");
     aux["caption"].value = PARAM_FILE;
@@ -203,7 +241,7 @@ void setup() {
     SPIFFS.begin();
     File param = SPIFFS.open(PARAM_FILE, "w");
     if (param) {
-      elementsAux.saveElement(param, { "text", "mqttusername", "mqttpassword", "adafruitname", "irch","controlch","telemetrych","statech" });
+      elementsAux.saveElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch","commandch","telemetrych","statech" });
       param.close();
       // Read the saved elements again to display.
       param = SPIFFS.open(PARAM_FILE, "r");
@@ -215,20 +253,29 @@ void setup() {
     }
     SPIFFS.end();
     return String();
-  });
-  
-  config.ota = AC_OTA_BUILTIN;
-  portal.join({ elementsAux, saveAux });
-  config.ticker = true;
-  portal.config(config);
-  portal.begin();
-  amber();
-  if (WiFi.status() == WL_CONNECTED) {
-    setup_mqtt();
-  }
-  dhtSetup();
-  Serial.println("INITIAL TEMPERATURE: " + String(previousTemperature) + " INITIAL HUMIDITY: " + String(previousHumidity));
-  t.every(60000, publishDhtData);
+  });  
+}
+
+void setMQTTDetails(AutoConnectAux& aux){
+  Serial.println("INSIDE MQTT");
+  SPIFFS.begin();
+File param = SPIFFS.open(PARAM_FILE, "r");
+  if (param) {
+    if (aux.loadElement(param)) {
+      aux.loadElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch","commandch","telemetrych","statech" });
+      MQTT_SERVER=stringToCharArray(aux["mqttserver"].value);
+      MQTT_USERNAME = stringToCharArray(aux["mqttusername"].value);
+      MQTT_PORT = (aux["mqttport"].value).toInt();
+      MQTT_PASSWORD = stringToCharArray(aux["mqttpassword"].value);
+      FEED_USERNAME = aux["adafruitname"].value;
+      IR_COMMANDS =stringToCharArray(aux["irch"].value);
+      DEVICE_COMMANDS = stringToCharArray(aux["commandch"].value);
+      DEVICE_STATE = stringToCharArray(aux["statech"].value);
+      DEVICE_TELEMETRY = stringToCharArray(aux["telemetrych"].value);
+       param.close();
+    }
+      SPIFFS.end();
+}
 }
 
 void onRoot() {
@@ -239,6 +286,15 @@ void onRoot() {
   server.client().stop();
 }
 
+
+
+char* stringToCharArray(String inputString){
+      int str_len = inputString.length() + 1; 
+      char char_array[str_len];
+      inputString.toCharArray(char_array, str_len);
+      return(char_array);
+      
+}
 void loop() {
   t.update();
   if (WiFi.status() != WL_CONNECTED)

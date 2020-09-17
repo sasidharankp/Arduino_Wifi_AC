@@ -4,9 +4,6 @@
 #define MQTT_PASSWORD ""      //AIO KEY
 
 
-#define WIFI_SSID ""         //WIFI SSID
-#define WIFI_PASSWORD ""      //WIFI PASSWORD
-
       //FEEL FREE TO MODIFY THE TOPIC PATTERNS OR ADD ADDITIONAL TOPICS HERE //
 #define LISTENING_TOPIC MQTT_USERNAME"/feeds/mushroom.threshold";
 #define OPERATING_MODE_TOPIC MQTT_USERNAME"/feeds/mushroom.operating-mode";

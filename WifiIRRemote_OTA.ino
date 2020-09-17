@@ -15,18 +15,6 @@ typedef ESP8266WebServer  WiFiWebServer;
 
 #define PARAM_FILE      "/mqtt.json"
 
-//Beginning Of MQTT Variables//
-char* MQTT_SERVER ="";
-char* MQTT_USERNAME = "";
-unsigned int MQTT_PORT = 1883;
-char* MQTT_PASSWORD = "";
-String FEED_USERNAME = ""; //some mqtt brokers require account username
-char* IR_COMMANDS = "";
-char* DEVICE_COMMANDS = "";
-char* DEVICE_STATE = "";
-char* DEVICE_TELEMETRY = "";
-char * clientId ="";
-//END Of MQTT Variables//
 
 static const char CONFIG_PAGE[] PROGMEM = R"(
 {
@@ -207,8 +195,7 @@ void setup() {
   
   if (WiFi.status() == WL_CONNECTED) {
     amber();
-    clientId=stringToCharArray("ESP8266AcRemote"+String(random(0xfffff), HEX));
-    setup_mqtt(MQTT_SERVER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, clientId);
+    setup_mqtt();
   }
   dhtSetup();
   Serial.println("INITIAL TEMPERATURE: " + String(previousTemperature) + " INITIAL HUMIDITY: " + String(previousHumidity));
@@ -256,27 +243,7 @@ saveAux.on([] (AutoConnectAux& aux, PageArgument& arg) {
   });  
 }
 
-void setMQTTDetails(AutoConnectAux& aux){
-  Serial.println("INSIDE MQTT");
-  SPIFFS.begin();
-File param = SPIFFS.open(PARAM_FILE, "r");
-  if (param) {
-    if (aux.loadElement(param)) {
-      aux.loadElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch","commandch","telemetrych","statech" });
-      MQTT_SERVER=stringToCharArray(aux["mqttserver"].value);
-      MQTT_USERNAME = stringToCharArray(aux["mqttusername"].value);
-      MQTT_PORT = (aux["mqttport"].value).toInt();
-      MQTT_PASSWORD = stringToCharArray(aux["mqttpassword"].value);
-      FEED_USERNAME = aux["adafruitname"].value;
-      IR_COMMANDS =stringToCharArray(aux["irch"].value);
-      DEVICE_COMMANDS = stringToCharArray(aux["commandch"].value);
-      DEVICE_STATE = stringToCharArray(aux["statech"].value);
-      DEVICE_TELEMETRY = stringToCharArray(aux["telemetrych"].value);
-       param.close();
-    }
-      SPIFFS.end();
-}
-}
+
 
 void onRoot() {
   WiFiWebServer& server = portal.host();
@@ -287,14 +254,6 @@ void onRoot() {
 }
 
 
-
-char* stringToCharArray(String inputString){
-      int str_len = inputString.length() + 1; 
-      char char_array[str_len];
-      inputString.toCharArray(char_array, str_len);
-      return(char_array);
-      
-}
 void loop() {
   t.update();
   if (WiFi.status() != WL_CONNECTED)

@@ -1,25 +1,54 @@
-//const char* mqttServer = MQTT_SERVER;
-//const int mqttPort = MQTT_PORT;
-//const char* mqttUser = MQTT_USERNAME;
-//const char* mqttPassword = MQTT_PASSWORD;
-//const char* irch = LISTENING_TOPIC;
-
 String deviceInfo="";
-void setup_mqtt(char * mqttserver,uint16_t mqttport,char * mqttusername,char * mqttpassword, char * clientID ) {
+String MQTT_SERVER = "";
+String MQTT_USERNAME = "";
+unsigned int MQTT_PORT = 1883;
+String MQTT_PASSWORD = "";
+String FEED_USERNAME = ""; //some mqtt brokers require account username
+String IR_COMMANDS = "";
+String DEVICE_COMMANDS = "";
+String DEVICE_STATE = "";
+String DEVICE_TELEMETRY = "";
+String clientId=("ESP8266AcRemote"+String(random(0xfffff), HEX));
+
+void setMQTTDetails(AutoConnectAux& aux){
+  SPIFFS.begin();
+File param = SPIFFS.open(PARAM_FILE, "r");
+  if (param) {
+    if (aux.loadElement(param)) {
+      aux.loadElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch","commandch","telemetrych","statech" });
+      MQTT_SERVER=(aux["mqttserver"].value);
+      MQTT_USERNAME = (aux["mqttusername"].value);
+      MQTT_PORT = (aux["mqttport"].value).toInt();
+      MQTT_PASSWORD = (aux["mqttpassword"].value);
+      FEED_USERNAME = aux["adafruitname"].value;
+      IR_COMMANDS =(aux["irch"].value);
+      DEVICE_COMMANDS = (aux["commandch"].value);
+      DEVICE_STATE = (aux["statech"].value);
+      DEVICE_TELEMETRY = (aux["telemetrych"].value);
+       param.close();
+    }
+      SPIFFS.end();
+}
+}
+
+void setup_mqtt() {
   Serial.println(" IP Address: "+(WiFi.localIP()).toString());
-  client.setServer(mqttserver, mqttport);
+  client.setServer(MQTT_SERVER.c_str(), MQTT_PORT);
   client.setCallback(decodeMessage);
-  while (!client.connected()) {
+  int connectCount=1;
+  while (!client.connected() && connectCount<6) {
     amber();
+    connectCount++;
+    Serial.println("MQTT Initial Connect Attempt: "+ connectCount);
     Serial.println("Connecting to MQTT...");
-    Serial.println(clientID);
-    Serial.println(mqttusername);
-    Serial.println(mqttpassword);
-    if (client.connect(clientId, mqttusername, mqttpassword )) {
+    Serial.println(clientId);
+    Serial.println(MQTT_USERNAME);
+    Serial.println(MQTT_PASSWORD);
+    if (client.connect(clientId.c_str(), MQTT_USERNAME.c_str(), MQTT_PASSWORD.c_str() )) {
       green();
       deviceInfo=("IP Address: "+(WiFi.localIP()).toString()+" MAC Address: "+String(WiFi.macAddress())+" connected as " + clientId);
       telemetry(deviceInfo);
-      if (client.subscribe(IR_COMMANDS)) {
+      if (client.subscribe(IR_COMMANDS.c_str())) {
         telemetry("Subscribed to " + String(IR_COMMANDS));
       }
     } else {
@@ -30,17 +59,17 @@ void setup_mqtt(char * mqttserver,uint16_t mqttport,char * mqttusername,char * m
   }
 }
 
-//boolean reconnect() {
-//  amber();
-//  if (client.connect(clientId, mqttusername, mqttpassword )) {
-//    green();
-//    telemetry("Reconnected");
-//    if (!client.subscribe(IR_COMMANDS)) {
-//      client.subscribe(IR_COMMANDS);
-//    }
-//    if (client.subscribe(IR_COMMANDS)) {
-//      telemetry("Subscribed to " + String(IR_COMMANDS));
-//    }
-//  }
-//  return client.connected();
-//}
+boolean reconnect() {
+  amber();
+  if (client.connect(clientId.c_str(), MQTT_USERNAME.c_str(), MQTT_PASSWORD.c_str() )) {
+    green();
+    telemetry("Reconnected");
+    if (!client.subscribe(IR_COMMANDS.c_str())) {
+      client.subscribe(IR_COMMANDS.c_str());
+    }
+    if (client.subscribe(IR_COMMANDS.c_str())) {
+      telemetry("Subscribed to " + String(IR_COMMANDS));
+    }
+  }
+  return client.connected();
+}

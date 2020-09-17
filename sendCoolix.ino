@@ -36,7 +36,7 @@ void IrSend(boolean power, uint8_t mode, boolean celsius, short degrees, uint8_t
   ac.next.protocol = (decode_type_t)15;
   ac.next.power = power;
   ac.next.model = -1; //JUST USE IT. because it works
-  ac.next.mode = IRCoolixAC::toCommonMode(mode);  // Run in cool mode initially.
+  ac.next.mode = IRCoolixAC::toCommonMode(mode);
   ac.next.celsius = celsius;  // Use Celsius for temp units. False = Fahrenheit
   ac.next.degrees = degrees;
   ac.next.fanspeed = IRCoolixAC::toCommonFanSpeed(fanspeed);

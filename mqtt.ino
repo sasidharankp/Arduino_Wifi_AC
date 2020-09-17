@@ -32,7 +32,6 @@ File param = SPIFFS.open(PARAM_FILE, "r");
 }
 
 void setup_mqtt() {
-  Serial.println(" IP Address: "+(WiFi.localIP()).toString());
   client.setServer(MQTT_SERVER.c_str(), MQTT_PORT);
   client.setCallback(decodeMessage);
   int connectCount=1;
@@ -40,16 +39,12 @@ void setup_mqtt() {
     amber();
     connectCount++;
     Serial.println("MQTT Initial Connect Attempt: "+ connectCount);
-    Serial.println("Connecting to MQTT...");
-    Serial.println(clientId);
-    Serial.println(MQTT_USERNAME);
-    Serial.println(MQTT_PASSWORD);
     if (client.connect(clientId.c_str(), MQTT_USERNAME.c_str(), MQTT_PASSWORD.c_str() )) {
       green();
       deviceInfo=("IP Address: "+(WiFi.localIP()).toString()+" MAC Address: "+String(WiFi.macAddress())+" connected as " + clientId);
       telemetry(deviceInfo);
-      if (client.subscribe(IR_COMMANDS.c_str())) {
-        telemetry("Subscribed to " + String(IR_COMMANDS));
+      if (client.subscribe((MQTT_USERNAME+IR_COMMANDS).c_str())) {
+        telemetry("Subscribed to " + (MQTT_USERNAME+IR_COMMANDS));
       }
     } else {
       Serial.println("failed with state ");
@@ -64,11 +59,11 @@ boolean reconnect() {
   if (client.connect(clientId.c_str(), MQTT_USERNAME.c_str(), MQTT_PASSWORD.c_str() )) {
     green();
     telemetry("Reconnected");
-    if (!client.subscribe(IR_COMMANDS.c_str())) {
-      client.subscribe(IR_COMMANDS.c_str());
+    if (!client.subscribe((MQTT_USERNAME+IR_COMMANDS).c_str())) {
+      client.subscribe((MQTT_USERNAME+IR_COMMANDS).c_str());
     }
-    if (client.subscribe(IR_COMMANDS.c_str())) {
-      telemetry("Subscribed to " + String(IR_COMMANDS));
+    if (client.subscribe((MQTT_USERNAME+IR_COMMANDS).c_str())) {
+      telemetry("Subscribed to " + String((MQTT_USERNAME+IR_COMMANDS)));
     }
   }
   return client.connected();

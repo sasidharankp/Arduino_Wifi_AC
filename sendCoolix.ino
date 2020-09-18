@@ -1,7 +1,7 @@
 const uint16_t kIrLed = 16;
 IRac ac(kIrLed);
 
-void IrSend(boolean power, uint8_t mode, boolean celsius, short degrees, uint8_t fanspeed, const char* swingv, boolean light, boolean beep, boolean econo, boolean filter, boolean turbo, boolean quiet, boolean clean) {
+void IrSend(boolean power, uint8_t mode, boolean celsius, short degrees, uint8_t fanspeed, const char* swingv, boolean light, boolean beep, boolean econo, boolean filter, boolean turbo, boolean quiet, boolean clean, int protocol, String manufacturer) {
 
 
 //  Serial.println("------------COOLIX-----------");
@@ -33,7 +33,7 @@ void IrSend(boolean power, uint8_t mode, boolean celsius, short degrees, uint8_t
 //  Serial.println(clean);
 //  Serial.println("-----------COOLIX------------");
 
-  ac.next.protocol = (decode_type_t)15;
+  ac.next.protocol = (decode_type_t)protocol;
   ac.next.power = power;
   ac.next.model = -1; //JUST USE IT. because it works
   ac.next.mode = IRCoolixAC::toCommonMode(mode);

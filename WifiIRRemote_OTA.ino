@@ -33,43 +33,12 @@ PubSubClient client(espClient);
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-const char* temperatureTopic = TEMPERATURE_TOPIC;
-const char* humidityTopic = HUMIDITY_TOPIC;
-
 long lastReconnectAttempt = 0;
 int previousHumidity = 0;
 float previousTemperature = 0;
 String nextState = "humidity";
 
-void setup() {
-  led_setup();
-  red();
-  randomSeed(micros());
-  Serial.begin(115200);
-  oledSetup();
-  delay(500);
 
-  server.on("/", []() {
-    onRoot();
-  });
-  loadMQTTForm();
-  saveMQTTForm();
-  setMQTTDetails(elementsAux);
-
-  config.ota = AC_OTA_BUILTIN;
-  portal.join({ elementsAux, saveAux });
-  config.ticker = true;
-  portal.config(config);
-  portal.begin();
-
-  if (WiFi.status() == WL_CONNECTED) {
-    amber();
-    setup_mqtt();
-  }
-  dhtSetup();
-  Serial.println("INITIAL TEMPERATURE: " + String(previousTemperature) + " INITIAL HUMIDITY: " + String(previousHumidity));
-  t.every(60000, publishDhtData);
-}
 
 void loadMQTTForm() {
   elementsAux.load(FPSTR(CONFIG_PAGE));
@@ -78,7 +47,7 @@ void loadMQTTForm() {
       SPIFFS.begin();
       File param = SPIFFS.open(PARAM_FILE, "r");
       if (param) {
-        aux.loadElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch", "commandch", "telemetrych", "statech" });
+        aux.loadElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch", "telemetrych", "statech" });
         param.close();
       }
       SPIFFS.end();
@@ -97,7 +66,7 @@ void saveMQTTForm() {
     SPIFFS.begin();
     File param = SPIFFS.open(PARAM_FILE, "w");
     if (param) {
-      elementsAux.saveElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch", "commandch", "telemetrych", "statech" });
+      elementsAux.saveElement(param, { "mqttusername", "mqttpassword", "adafruitname", "mqttserver", "mqttport", "irch", "telemetrych", "statech" });
       param.close();
       // Read the saved elements again to display.
       param = SPIFFS.open(PARAM_FILE, "r");
@@ -123,25 +92,14 @@ void onRoot() {
 }
 
 
-void loop() {
-  t.update();
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    red();
-    Serial.println("WIFI DISCONNECTED");
-  } else {
-    if (!client.connected()) {
-      long now = millis();
-      if (now - lastReconnectAttempt > 5000) {
-        lastReconnectAttempt = now;
-        if (reconnect()) {
-          lastReconnectAttempt = 0;
-        }
-      }
-    } else {
-      // Client connected
-      client.loop();
-    }
-  }
-  portal.handleClient();
-}
+
+String deviceInfo = "";
+String MQTT_SERVER = "";
+String MQTT_USERNAME = "";
+unsigned int MQTT_PORT = 1883;
+String MQTT_PASSWORD = "";
+String FEED_USERNAME = ""; //some mqtt brokers require account username
+String IR_COMMANDS = "";
+String DEVICE_STATE = "";
+String DEVICE_TELEMETRY = "";
+String clientId = ("ESP8266AcRemote" + String(random(0xfffff), HEX));

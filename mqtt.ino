@@ -1,15 +1,3 @@
-String deviceInfo = "";
-String MQTT_SERVER = "";
-String MQTT_USERNAME = "";
-unsigned int MQTT_PORT = 1883;
-String MQTT_PASSWORD = "";
-String FEED_USERNAME = ""; //some mqtt brokers require account username
-String IR_COMMANDS = "";
-String DEVICE_COMMANDS = "";
-String DEVICE_STATE = "";
-String DEVICE_TELEMETRY = "";
-String clientId = ("ESP8266AcRemote" + String(random(0xfffff), HEX));
-
 void setMQTTDetails(AutoConnectAux& aux) {
   SPIFFS.begin();
   File param = SPIFFS.open(PARAM_FILE, "r");
@@ -22,7 +10,6 @@ void setMQTTDetails(AutoConnectAux& aux) {
       MQTT_PASSWORD = (aux["mqttpassword"].value);
       FEED_USERNAME = aux["adafruitname"].value;
       IR_COMMANDS = (aux["irch"].value);
-      DEVICE_COMMANDS = (aux["commandch"].value);
       DEVICE_STATE = (aux["statech"].value);
       DEVICE_TELEMETRY = (aux["telemetrych"].value);
       param.close();
@@ -38,7 +25,7 @@ void setup_mqtt() {
   while (!client.connected() && connectCount < 6) {
     amber();
     connectCount++;
-    Serial.println("MQTT Initial Connect Attempt: " + connectCount);
+    Serial.println("MQTT Initial Connect Attempt: " + String(connectCount));
     if (client.connect(clientId.c_str(), MQTT_USERNAME.c_str(), MQTT_PASSWORD.c_str() )) {
       green();
       deviceInfo = ("IP Address: " + (WiFi.localIP()).toString() + " MAC Address: " + String(WiFi.macAddress()) + " connected as " + clientId);

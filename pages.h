@@ -59,13 +59,6 @@ static const char CONFIG_PAGE[] PROGMEM = R"(
       "value":"/feeds/ircommands"
     },
     {
-      "name": "commandch",
-      "type": "ACInput",
-      "label": "Device Control Channel",
-      "placeholder":"Channel to Receive device Commands",
-      "value":"/feeds/devicecommands"
-    },
-    {
       "name": "telemetrych",
       "type": "ACInput",
       "label": "Device Telemetry Channel",

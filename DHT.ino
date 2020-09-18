@@ -6,41 +6,29 @@ void dhtSetup()
   previousTemperature = dht.readTemperature();
 }
 
-void publishDhtData() {
-  if (nextState == "humidity") {
-    publishHumidity();
-    nextState = "temperature";
-  } else if (nextState == "temperature") {
-    publishTemperature();
-    nextState = "humidity";
-  }
-}
+const size_t dhtJsonCapacity = JSON_OBJECT_SIZE(4);
+DynamicJsonDocument dhtJson(dhtJsonCapacity);
 
-void publishHumidity() {
-  int currentHumidity = dht.readHumidity();
-  if (isnan(currentHumidity)) {
-    telemetry("Failed to read Humidity from sensor!");
-    return;
-  } else if (currentHumidity < 100) {
-    telemetry("Previous Humidity: " + String(previousHumidity) + " Current Humidity " + String(currentHumidity));
-    if (previousHumidity != currentHumidity) {
-//      client.publish(humidityTopic, String(currentHumidity).c_str(), true);
-      previousHumidity = currentHumidity;
-    }
-    showHumidity(String(currentHumidity));
+void readDhtData() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    publishTemperatureJson(0,0,false);
+  }else{
+    publishTemperatureJson(t,h,true);
   }
-}
-void publishTemperature() {
-  float currentTemperature = dht.readTemperature();
-  if (isnan(currentTemperature)) {
-    telemetry("Failed to read Humidity from sensor!");
-    return;
-  } else if (currentTemperature < 100) {
-    telemetry("Previous Temperature: " + String(previousTemperature) + " Current Temperature " + String(currentTemperature));
-    if (previousTemperature != currentTemperature) {
-//      client.publish(temperatureTopic, String(currentTemperature).c_str(), true);
-      previousTemperature = currentTemperature;
-    }
-    showTemperature(String(currentTemperature));
   }
-}
+
+  void publishTemperatureJson(float temperature, float humidity, bool isSensorAvailable){
+  dhtJson["isSensorAvailable"] = isSensorAvailable;
+  dhtJson["sensor_type"] = String(DHTTYPE);
+  dhtJson["temperature"] = temperature;
+  dhtJson["humidity"] = humidity;
+  
+  char buffer[256];
+  size_t n = serializeJson(dhtJson, buffer);
+  client.publish((MQTT_USERNAME + DEVICE_STATE).c_str(),buffer, n);
+  }
+
+                          

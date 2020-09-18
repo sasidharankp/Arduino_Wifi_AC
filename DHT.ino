@@ -24,7 +24,7 @@ void publishHumidity() {
   } else if (currentHumidity < 100) {
     telemetry("Previous Humidity: " + String(previousHumidity) + " Current Humidity " + String(currentHumidity));
     if (previousHumidity != currentHumidity) {
-      client.publish(humidityTopic, String(currentHumidity).c_str(), true);
+//      client.publish(humidityTopic, String(currentHumidity).c_str(), true);
       previousHumidity = currentHumidity;
     }
     showHumidity(String(currentHumidity));
@@ -38,7 +38,7 @@ void publishTemperature() {
   } else if (currentTemperature < 100) {
     telemetry("Previous Temperature: " + String(previousTemperature) + " Current Temperature " + String(currentTemperature));
     if (previousTemperature != currentTemperature) {
-      client.publish(temperatureTopic, String(currentTemperature).c_str(), true);
+//      client.publish(temperatureTopic, String(currentTemperature).c_str(), true);
       previousTemperature = currentTemperature;
     }
     showTemperature(String(currentTemperature));

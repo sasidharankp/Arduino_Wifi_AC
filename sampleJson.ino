@@ -1,10 +1,9 @@
-//POWER OFF
 //{
 //   "power":false,
-//   "mode":"Off",
+//   "mode":5,
 //   "celsius":true,
-//   "degrees":25.0,
-//   "fanspeed":"Max",
+//   "degrees":25,
+//   "fanspeed":5,
 //   "swingv":"Auto",
 //   "light":false,
 //   "beep":false,
@@ -12,5 +11,7 @@
 //   "filter":false,
 //   "turbo":false,
 //   "quiet":false,
-//   "clean":false
+//   "clean":false,
+//   "protocol":15,
+//   "manufacturer":"coolix"
 //}
